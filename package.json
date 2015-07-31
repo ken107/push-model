@@ -1,0 +1,28 @@
+{
+  "name": "push-model",
+  "version": "0.0.1",
+  "description": "A Node app that hosts an MVC model and controller, publishes change as JSON patches to views",
+  "keywords": ["mvc", "model", "controller", "observe", "jsonpatch", "firebase"],
+  "license": "MIT",
+  "author": "Hai Phan <hai.phan@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ken107/push-model"
+  },
+  "bugs": {
+    "url": "https://github.com/ken107/push-model/issues"
+  },
+  "files": [
+    "pushmodel.js",
+	"examples"
+  ],
+  "dependencies": {
+    "commander": "^2.8.1",
+    "jsonpatch-observe": "^0.0.6",
+    "jsonpointer": "^1.1.0",
+    "ws": "^0.7.1"
+  },
+  "engines": {
+    "node": ">=0.11.13"
+  }
+}

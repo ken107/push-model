@@ -1,0 +1,81 @@
+<div data-view-name="Filters" class="todo-filters"
+	bind-var-view-root="thisElem"
+	bind-var-filters="['All', 'Active', 'Completed']">
+	<span class="filter"
+		bind-repeater-i="#filters.length"
+		bind-var-filter="#filters[#i]"
+		bind-statement-1="toggleClass(thisElem, 'active', #currentFilter == #filter)"
+		bind-event-click="dispatchEvent(#viewRoot, 'setFilter', #filter)">
+		{{#filter}}
+	</span>
+</div>
+
+
+<li data-view-name="TodoItem" class="todo-item"
+	bind-var-view-root="thisElem">
+	<div class="delete-button"
+		bind-event-click="dispatchEvent(#viewRoot, 'deleteItem')">X</div>
+	<input type="checkbox"
+		bind-statement-1="thisElem.checked = #completed"
+		bind-event-change="dispatchEvent(#viewRoot, 'setCompleted', thisElem.checked)" />
+	<span class="text"
+		bind-statement-1="thisElem.style.display = #editMode ? 'none' : 'inline-block'"
+		bind-statement-2="thisElem.style.textDecoration = #completed ? 'line-through' : 'none'"
+		bind-event-click="dispatchEvent(#viewRoot, 'startEdit')">
+		{{#text}}
+	</span>
+	<input type="text"
+		bind-statement-1="thisElem.value = #text"
+		bind-statement-2="thisElem.style.display = #editMode ? '' : 'none'"
+		bind-statement-3="if (#editMode) thisElem.focus()"
+		bind-event-keyup="if (event.which == 27) dispatchEvent(#viewRoot, 'stopEdit')"
+		bind-event-keypress="if (event.which == 13) {dispatchEvent(#viewRoot, 'setText', thisElem.value); dispatchEvent(#viewRoot, 'stopEdit'); return false}" />
+</li>
+
+
+<div data-view-name="TodoList" class="todo-list"
+	bind-var-view-root="thisElem"
+	bind-var-update-flag="0"
+	bind-var-current-filter="'All'">
+	<h1>TODO</h1>
+	<div bind-view="Filters"
+		bind-param-current-filter="#currentFilter"
+		bind-event-set-filter="#currentFilter = event.data">
+	</div>
+	<ul bind-var-filtered-items="#updateFlag, this.filterItems(#items, #currentFilter)"
+		bind-var-edit-item="null">
+		<li>
+			<input type="checkbox"
+				bind-statement-1="#updateFlag, thisElem.checked = this.isAllCompleted(#items)"
+				bind-statement-2="thisElem.disabled = !#items.length"
+				bind-event-change="dispatchEvent(#viewRoot, 'setAllCompleted', thisElem.checked)" />
+			<input type="text" placeholder="What to do?"
+				bind-event-keypress="if (event.which == 13) {dispatchEvent(#viewRoot, 'addItem', thisElem.value); thisElem.value = ''; return false}" />
+		</li>
+		<li bind-repeater-i="#filteredItems.length"
+			bind-var-item="#filteredItems[#i]"
+			bind-view="TodoItem"
+			bind-param-text="#item.text"
+			bind-param-completed="#item.completed"
+			bind-param-edit-mode="#item == #editItem"
+			bind-event-start-edit="#editItem = #item"
+			bind-event-stop-edit="#editItem = null"
+			bind-event-set-completed="dispatchEvent(#viewRoot, 'setCompleted', {item: #item, completed: event.data})"
+			bind-event-set-text="dispatchEvent(#viewRoot, 'setText', {item: #item, text: event.data})"
+			bind-event-delete-item="dispatchEvent(#viewRoot, 'deleteItem', #item)">
+		</li>
+	</ul>
+	<div class="clear-completed"
+		bind-statement-1="#updateFlag, thisElem.style.display = this.isSomeCompleted(#items) ? '' : 'none'">
+		<input type="button" value="Clear Completed"
+			bind-event-click="dispatchEvent(#viewRoot, 'clearCompleted')" />
+	</div>
+	<div>
+		{{#updateFlag, this.countIncomplete(#items)}} remaining
+	</div>
+	<!-- the following detects when items are added/deleted or when their completed state change and set the updateFlag -->
+	<div bind-statement-1="#items.length, #updateFlag++">
+		<div bind-repeater-i="#items.length"
+			bind-statement-1="#items[#i].completed, #updateFlag++"></div>
+	</div>
+</div>
