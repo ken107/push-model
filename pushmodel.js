@@ -5,45 +5,12 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-var program = require("commander"),
-	fs = require("fs"),
-	WebSocketServer = require("ws").Server,
+var WebSocketServer = require("ws").Server,
 	jsonpointer = require("jsonpointer"),
-	observe = require("jsonpatch-observe").observe,
-	model = {},
-	actions = {};
+	observe = require("jsonpatch-observe").observe;
 
-program
-	.version("0.0.1")
-	.usage("[options] <controller.js>")
-	.option("-H, --host <host>", "listening ip or host name", "0.0.0.0")
-	.option("-p, --port <port>", "listening port", 8080)
-	.parse(process.argv);
-
-if (program.args.length != 1) program.help();
-var code = fs.readFileSync(program.args[0], {encoding: "utf-8"});
-new Function("defPrivate", "trackKeys", code).call(actions, defPrivate, trackKeys);
-if (actions.init) actions.init(model);
-
-fs.watchFile(program.args[0], function(curr, prev) {
-	if (curr.mtime.getTime() != prev.mtime.getTime()) {
-		console.log("Reloading app");
-		fs.readFile(program.args[0], {encoding: "utf-8"}, function(err, code) {
-			if (err) {
-				console.log(err.stack);
-				return;
-			}
-			try {
-				new Function("defPrivate", "trackKeys", code).call(actions, defPrivate, trackKeys);
-			}
-			catch (err) {
-				console.log(err.stack);
-			}
-		});
-	}
-});
-
-var wss = new WebSocketServer({host: program.host, port: program.port});
+exports.listen = function(host, port, model) {
+var wss = new WebSocketServer({host: host, port: port});
 wss.on("connection", function(ws) {
 	var session = null;
 	var subscriptions = {};
@@ -65,8 +32,8 @@ wss.on("connection", function(ws) {
 			}
 			else if (m.cmd === "ACT") {
 				if (m.method === "init") throw "Method 'init' is called automatically only once at startup";
-				if (!(actions[m.method] instanceof Function)) throw "Method '" + m.method + "' not found";
-				actions[m.method].apply(actions, [model].concat(m.args || []));
+				if (!(model[m.method] instanceof Function)) throw "Method '" + m.method + "' not found";
+				model[m.method].apply(model, m.args);
 			}
 			else throw "Unknown command '" + m.cmd + "'";
 		}
@@ -117,13 +84,14 @@ wss.on("connection", function(ws) {
 		}
 	}
 });
+};
 
-function defPrivate(obj, prop, val) {
+exports.defPrivate = function(obj, prop, val) {
 	if (val === undefined) val = obj[prop];
 	Object.defineProperty(obj, prop, {value: val, writable: true, enumerable: false, configurable: true});
-}
+};
 
-function trackKeys(obj) {
+exports.trackKeys = function(obj) {
 	if (obj.keys) return;
 	obj.keys = [];
 	Object.observe(obj, updateKeys, ["add", "delete", "reconfigure"]);
@@ -132,7 +100,7 @@ function trackKeys(obj) {
 			Object.unobserve(obj, updateKeys);
 		}
 	};
-}
+};
 
 function updateKeys(changes) {
 	for (var i=0; i<changes.length; i++) {

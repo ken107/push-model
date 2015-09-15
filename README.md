@@ -1,35 +1,22 @@
 ## What's This?
-A Push Model is an MVC model that sits on the server and push changes to its views.  A Push Model is useful in live applications, where it's necessary to have a synchronized view state across all clients (see also Angular JS's Firebase).
+This Node module defines and implements a simple PUB/SUB protocol for server-client object synchronization based on WebSocket, JSON, the JSONPointer and JSONPatch standards.
 
-Chat is a good example.  In an MVC chat application, your chat log lives on the server.  Each chat client has a copy of the chat log that is kept synchronized with the server via a PUB/SUB mechanism.  The controller (also on server) receives new chat messages from clients and append them to the chat log.
-
-This Push Model implementation runs on Node.js and uses `Object.observe` to monitor change.
+It is called a Push Model because it is intended to be used as part of a server-side MVC Model layer or MVVM ViewModel layer that requires the ability to push updates to clients.
 
 
 ## How To Use
 ```
-C:\push-model>node pushmodel.js
-
-  Usage: pushmodel [options] <controller.js>
-
-  Options:
-
-    -h, --help         output usage information
-    -V, --version      output the version number
-    -H, --host <host>  listening ip or host name
-    -p, --port <port>  listening port
+require("push-model").listen(host, port, model);
 ```
 
-At the center, the pushmodel simply has a Model object that is observed, and changes are pushed to any interested clients as JSON patches.  Changes to the Model object are made by the controller whose behavior is defined in "controller.js".  The behavior of the controller depends on your application.
+This will start listening for WebSocket connections on the specified host and port.  Clients will connect and use the connection to subscribe for changes, as well as to send actions to the model.
 
 
-### The Model
-The pushmodel listens for WebSocket connections on a specific host and port (or *:8080 if not specified).  Clients connect to the model and use the connection to subscribe for changes to the model, as well as to send actions to the controller.
-
+### The Protocol
 Each message over this connection is a WebSocket text frame whose content is a JSON object.  This object must have a _cmd_ property whose value is one of "SUB", "UNSUB", "PUB", or "ACT".
 
 ##### SUB/UNSUB
-Clients send a SUB/UNSUB message to the server to start/stop observing changes to the Model.  The message must contain a _pointers_ property which holds an array of JSON Pointers (RFC 6901) into the Model object:
+Clients send a SUB/UNSUB message to the server to start/stop observing changes to the model.  The message must contain a _pointers_ property which holds an array of JSON Pointers (RFC 6901) into the model object:
 ```
 {
     cmd: "SUB",
@@ -38,7 +25,7 @@ Clients send a SUB/UNSUB message to the server to start/stop observing changes t
 ```
 
 ##### PUB
-Server sends a PUB message to notify clients of changes to the Model.  The message shall contain a _patches_ property, which holds an array of JSON Patches (RFC 6902) describing a series of changes that were made to the Model object.
+Server sends a PUB message to notify clients of changes to the model.  The message shall contain a _patches_ property, which holds an array of JSON Patches (RFC 6902) describing a series of changes that were made to the model object.
 ```
 {
     cmd: "SUB",
@@ -47,7 +34,7 @@ Server sends a PUB message to notify clients of changes to the Model.  The messa
 ```
 
 ##### ACT
-Clients send an ACT message to the server to execute a controller action.  The message must contain a _method_ string property, and an _args_ array property.  The server shall invoke the specified controller method with the provided arguments.
+Clients send an ACT message to the server to execute an action.  The message must contain a _method_ string property, and an _args_ array property.  The server shall invoke the specified model method with the provided arguments.
 ```
 {
     cmd: "ACT",
@@ -57,23 +44,18 @@ Clients send an ACT message to the server to execute a controller action.  The m
 ```
 
 
-### The Controller
-The controller.js provided to the pushmodel specifies the controller actions that can be invoked by the clients.  It must contain a series of method declarations on `this`, each method corresponding to one action:
+### The Model
+The model object you provide as the 3rd argument to _listen_ contains data properties that clients subscribe to, as well as methods that they can invoke.  Here is how you would implement the model for a simple chat app:
 ```javascript
-this.method = function(model, ...args) {
-    ....
-};
-```
-Note that the first argument to the method is always the Model object, followed by the arguments provided by the client in the ACT message.
-
-If a special method named `init` exists, it will be called automatically once when the controller starts up; this method can be used to initialize the Model.  Following is the controller for the sample MVC chat app:
-```javascript
-this.init = function(model) {
-	model.chatLog = ["Welcome!"];
-};
-this.sendChat = function(model, name, message) {
-	model.chatLog.push(name + ": " + message);
-};
+require("push-model").listen("localhost", 8080, {
+	//data
+	chatLog: ["Welcome!"],
+	
+	//actions
+	sendChat: function(name, message) {
+		this.chatLog.push(name + ": " + message);
+	}
+});
 ```
 
 
@@ -83,22 +65,22 @@ this.sendChat = function(model, name, message) {
 Open a command prompt in the push-model directory and run:
 ```
 npm install
-node pushmodel.js examples/chat/chat.js
+node examples/chat/model.js
 ```
-That will start the chat controller on localhost:8080.  Then open the file examples/chat/chat.html in two browser windows and start chatting!
+That will start the chat model on localhost:8080.  Then open the file examples/chat/chat.html in two browser windows and start chatting!
 
 ##### Running the Shared TodoList Example
 Open a command prompt in the push-model directory and run:
 ```
 npm install
-node pushmodel.js examples/sharedtodolist/todo_controller.js
+node examples/sharedtodolist/model.js
 ```
 Then open the file examples/sharedtodolist/todo.html in two or more browser windows.  If you use Chrome, you must run a local web server because Chrome does not allow AJAX over file:// URL.
 
 ##### Running the Messenger Example
 ```
 npm install
-node pushmodel.js examples/messenger/controller.js
+node examples/messenger/model.js
 ```
 Then open the file examples/messenger/messenger.html in two or more browser windows.  Enter a user ID and name to login to the messenger app.
 
