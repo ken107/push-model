@@ -1,55 +1,67 @@
 ## What's This?
-This Node module defines and implements a simple PUB/SUB protocol for server-client object synchronization based on WebSocket, JSON, the JSONPointer and JSONPatch standards.
+This Node module implements a WebSocket JSON-RPC server with object synchronization capabilities based on the JSON-Pointer and JSON-Patch standards.
 
 It is called a Push Model because it is intended to be used as part of a server-side MVC Model layer or MVVM ViewModel layer that requires the ability to push updates to clients.
+
+The Model/ViewModel layer can handle JSON-RPC requests and return data directly to the requester, or it may choose to place data in a _model object_, which is published to any interested clients.  `Object.observe` is used to detect subsequent changes to the data, which are published incrementally as JSON Patches.
 
 
 ## How To Use
 ```
-require("push-model").listen(host, port, model);
-```
-
-This will start listening for WebSocket connections on the specified host and port.  Clients will connect and use the connection to subscribe for changes, as well as to send actions to the model.
-
-
-### The Protocol
-Each message over this connection is a WebSocket text frame whose content is a JSON object.  This object must have a _cmd_ property whose value is one of "SUB", "UNSUB", "PUB", or "ACT".
-
-##### SUB/UNSUB
-Clients send a SUB/UNSUB message to the server to start/stop observing changes to the model.  The message must contain a _pointers_ property which holds an array of JSON Pointers (RFC 6901) into the model object:
-```
-{
-    cmd: "SUB",
-	pointers: [array of JSON Pointers]
+var pm = require("push-model");
+var model = {
+	prop1: ...,
+	prop2: ...,
+	method1: function(params) {
+		...
+		return result;
+	},
+	method2: ...
 }
+pm.listen(host, port, model);
+```
+This will start listening for WebSocket connections on the specified host and port.  Clients will connect and send RPC requests which will invoke the corresponding methods on the _model_ object.  Return values are automatically sent back as JSON-RPC responses.
+
+
+### Special Methods
+##### SUB/UNSUB
+Clients call SUB/UNSUB to start/stop observing changes to the model object.  A _pointer_ parameter, which is a JSON Pointer, indicates which _subtree_ in the model object to observe.
+```
+SUB(pointer)
+UNSUB(pointer)
 ```
 
 ##### PUB
-Server sends a PUB message to notify clients of changes to the model.  The message shall contain a _patches_ property, which holds an array of JSON Patches (RFC 6902) describing a series of changes that were made to the model object.
+Server calls PUB to notify clients of changes to the model.  The _patches_ parameter holds an array of JSON Patches describing a series of changes that were made to the model object.
 ```
-{
-    cmd: "SUB",
-	patches: [array of JSON Patches]
-}
-```
-
-##### ACT
-Clients send an ACT message to the server to execute an action.  The message must contain a _method_ string property, and an _args_ array property.  The server shall invoke the specified model method with the provided arguments.
-```
-{
-    cmd: "ACT",
-	method: "action method",
-	args: [array of arguments]
-}
+SUB(patches)
 ```
 
 
-### The Model
-The model object you provide as the 3rd argument to _listen_ contains data properties that clients subscribe to, as well as methods that they can invoke.  Here is how you would implement the model for a simple chat app:
+### Special Return Values
+##### ErrorResponse
+A return value of type ErrorResponse will be translated into a JSON-RPC error message.
+```
+return new pm.ErrorResponse(code, message, data);
+```
+
+##### AsyncResponse
+A return value of type AsyncResponse will delay the JSON-RPC response until the application calls the AsyncResponse.send function.
+```
+var response = new require("push-model").AsyncResponse();
+getDataFromDB(function(result) {
+	response.send(result);
+});
+return response;
+```
+
+
+### A Simple Example
+An MVC chat server that uses object synchronization.
 ```javascript
 require("push-model").listen("localhost", 8080, {
 	//data
-	chatLog: ["Welcome!"],
+	chatLog: [],
 	
 	//actions
 	sendChat: function(name, message) {

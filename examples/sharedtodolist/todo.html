@@ -37,17 +37,18 @@
 	<script>
 		items = [];
 		
+		var idGen = 0;
 		var ws = new (WebSocket || MozWebSocket)("ws://localhost:8080/todo");
 		ws.onopen = function() {
 			//specify that we can handle the non-standard "splice" op
-			ws.send(JSON.stringify({cmd: "SUB", pointers: ["/items"], canSplice: true}));
+			ws.send(JSON.stringify({jsonrpc: "2.0", id: ++idGen, method: "SUB", params: {pointer: "/items", canSplice: true}}));
 		};
 		ws.onmessage = function(e) {
 			var m = eval('(' + e.data + ')');
-			if (m.cmd == "PUB") jsonpatch.apply(window, m.patches);
+			if (m.method == "PUB") jsonpatch.apply(window, m.params[0]);
 		};
 		function action(method, args) {
-			ws.send(JSON.stringify({cmd: "ACT", method: method, args: args}));
+			ws.send(JSON.stringify({jsonrpc: "2.0", id: ++idGen, method: method, params: args}));
 		}
 	</script>
 </head>

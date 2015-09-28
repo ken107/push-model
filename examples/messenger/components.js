@@ -3,20 +3,24 @@ function Messenger(elem) {
 	this.users = null;
 	this.session = null;
 	var ws;
+	var idGen = 0;
 	this.connect = function() {
 		if (ws) ws.close();
 		ws = new (WebSocket || MozWebSocket)(this.connectUrl);
 		ws.onopen = (function() {
 			this.action("signIn", [this.myUserInfo]);
-			ws.send(JSON.stringify({cmd: "SUB", pointers: ["/users", "/session"]}));
+			ws.send(JSON.stringify([
+				{jsonrpc: "2.0", id: ++idGen, method: "SUB", params: ["/users"]},
+				{jsonrpc: "2.0", id: ++idGen, method: "SUB", params: ["/session"]}
+			]));
 		}).bind(this);
 		ws.onmessage = (function(e) {
 			var m = JSON.parse(e.data);
-			if (m.cmd == "PUB") jsonpatch.apply(this, m.patches);
+			if (m.method == "PUB") jsonpatch.apply(this, m.params[0]);
 		}).bind(this);
 	};
 	this.action = function(method, args) {
-		ws.send(JSON.stringify({cmd: "ACT", method: method, args: args}));
+		ws.send(JSON.stringify({jsonrpc: "2.0", id: ++idGen, method: method, params: args}));
 	};
 }
 

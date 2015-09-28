@@ -9,59 +9,111 @@ var WebSocketServer = require("ws").Server,
 	jsonpointer = require("jsonpointer"),
 	observe = require("jsonpatch-observe").observe;
 
+exports.ErrorResponse = function(code, message, data) {
+	this.code = code;
+	this.message = message;
+	this.data = data;
+};
+
+exports.AsyncResponse = function() {
+	this.send = function(result) {
+		this.result = result;
+	};
+};
+
 exports.listen = function(host, port, model) {
-var wss = new WebSocketServer({host: host, port: port});
-wss.on("connection", function(ws) {
-	var session = null;
-	var subscriptions = {};
-	var pendingPatches = [];
-	ws.on("message", function(text) {
-		model.session = session;
-		var m = {};
-		try {
-			m = JSON.parse(text);
-			if (!(m instanceof Object)) throw "Message must be a JSON object";
-			if (!m.cmd) throw "Missing param 'cmd'";
-			if (m.cmd === "SUB") {
-				if (!m.pointers) throw "Missing param 'pointers'";
-				(m.pointers instanceof Array ? m.pointers : [m.pointers]).forEach(subscribe.bind(null, m.canSplice));
+	var wss = new WebSocketServer({host: host, port: port});
+	wss.on("connection", function(ws) {
+		var session = null;
+		var subman = new SubMan(model, send);
+		ws.on("message", function(text) {
+			model.session = session;
+			try {
+				var messages = JSON.parse(text);
+				if (!Array.isArray(messages)) messages = [messages];
+				messages.forEach(handle);
 			}
-			else if (m.cmd === "UNSUB") {
-				if (!m.pointers) throw "Missing param 'pointers'";
-				(m.pointers instanceof Array ? m.pointers : [m.pointers]).forEach(unsubscribe);
+			catch (err) {
+				sendError(null, -32700, "Parse error");
 			}
-			else if (m.cmd === "ACT") {
-				if (m.method === "init") throw "Method 'init' is called automatically only once at startup";
-				if (!(model[m.method] instanceof Function)) throw "Method '" + m.method + "' not found";
-				model[m.method].apply(model, m.args);
-			}
-			else throw "Unknown command '" + m.cmd + "'";
-		}
-		catch (err) {
-			console.log(err.stack || err);
-		}
-		session = model.session;
-		model.session = null;
-	});
-	ws.on("close", function() {
-		for (var pointer in subscriptions) subscriptions[pointer].cancel();
-		if (session && session.onclose instanceof Function) session.onclose();
-	});
-	function subscribe(canSplice, pointer) {
-		if (pointer == "") throw "Cannot subscribe to the root model object";
-		if (subscriptions[pointer]) subscriptions[pointer].count++;
-		else {
-			var o = jsonpointer.get(model, pointer);
-			if (!(o instanceof Object)) {
-				console.warn("Can't subscribe to '" + pointer + "', value is null or not an object");
+			session = model.session;
+			model.session = null;
+		});
+		ws.on("close", function() {
+			subman.unsubscribeAll();
+			if (session && session.onclose instanceof Function) session.onclose();
+		});
+		function handle(message) {
+			if (message.jsonrpc != "2.0") {
+				sendError(message.id, -32600, "Invalid request", "Not JSON-RPC version 2.0");
 				return;
 			}
-			sendPatches([{op: "replace", path: pointer, value: o}]);
-			subscriptions[pointer] = observe(o, sendPatches, pointer, canSplice);
+			var func;
+			switch (message.method) {
+				case "SUB": func = subman.subscribe; break;
+				case "UNSUB": func = subman.unsubscribe; break;
+				default: func = model[message.method];
+			}
+			if (!(func instanceof Function)) {
+				sendError(message.id, -32601, "Method not found");
+				return;
+			}
+			if (!message.params) message.params = [];
+			else if (!Array.isArray(message.params)) message.params = getParamNames(func).map(function(name) {return message.params[name]});
+			try {
+				var result = func.apply(model, message.params);
+				handleResult(message.id, result);
+			}
+			catch (err) {
+				console.log(err.stack);
+				sendError(message.id, -32603, "Internal error");
+			}
+		}
+		function handleResult(id, result) {
+			if (result instanceof exports.ErrorResponse) sendError(id, result.code, result.message, result.data);
+			else if (result instanceof exports.AsyncResponse) {
+				if (result.hasOwnProperty("result")) handleResult(id, result.result);
+				else result.send = handleResult.bind(null, id);
+			}
+			else sendResult(id, result);
+		}
+		function sendResult(id, result) {
+			if (id !== undefined) send({id: id, result: result});
+		}
+		function sendError(id, code, message, data) {
+			if (id !== undefined) send({id: id, error: {code: code, message: message, data: data}});
+		}
+		function send(message) {
+			try {
+				message.jsonrpc = "2.0";
+				ws.send(JSON.stringify(message));
+			}
+			catch (err) {
+				console.log(err.stack);
+			}
+		}
+	});
+};
+
+function SubMan(model, send) {
+	var subscriptions = {};
+	var pendingPatches = [];
+	this.subscribe = function(pointer, canSplice) {
+		if (pointer == null) return new exports.ErrorResponse(-32602, "Invalid params", "Missing param 'pointer'");
+		if (typeof pointer != "string") return new exports.ErrorResponse(-32602, "Invalid params", "Pointer must be a string");
+		if (pointer == "") return new exports.ErrorResponse(-32602, "Invalid params", "Cannot subscribe to the root model object");
+		if (subscriptions[pointer]) subscriptions[pointer].count++;
+		else {
+			var obj = jsonpointer.get(model, pointer);
+			if (!(obj instanceof Object)) return new exports.ErrorResponse(0, "Application error", "Can't subscribe to '" + pointer + "', value is null or not an object");
+			sendPatches([{op: "replace", path: pointer, value: obj}]);
+			subscriptions[pointer] = observe(obj, sendPatches, pointer, canSplice);
 			subscriptions[pointer].count = 1;
 		}
-	}
-	function unsubscribe(pointer) {
+	};
+	this.unsubscribe = function(pointer) {
+		if (pointer == null) return new exports.ErrorResponse(-32602, "Invalid params", "Missing param 'pointer'");
+		if (typeof pointer != "string") return new exports.ErrorResponse(-32602, "Invalid params", "Pointer must be a string");
 		if (subscriptions[pointer]) {
 			subscriptions[pointer].count--;
 			if (subscriptions[pointer].count <= 0) {
@@ -69,22 +121,19 @@ wss.on("connection", function(ws) {
 				delete subscriptions[pointer];
 			}
 		}
-	}
+	};
+	this.unsubscribeAll = function() {
+		for (var pointer in subscriptions) subscriptions[pointer].cancel();
+	};
 	function sendPatches(patches) {
 		if (!pendingPatches.length) setTimeout(sendPendingPatches, 0);
 		pendingPatches.push.apply(pendingPatches, patches);
 	}
 	function sendPendingPatches() {
-		try {
-			ws.send(JSON.stringify({cmd: "PUB", patches: pendingPatches}));
-			pendingPatches = [];
-		}
-		catch (err) {
-			console.log(err.stack)
-		}
+		send({method: "PUB", params: [pendingPatches]});
+		pendingPatches = [];
 	}
-});
-};
+}
 
 exports.defPrivate = function(obj, prop, val) {
 	if (val === undefined) val = obj[prop];
@@ -122,4 +171,14 @@ function updateKeys(changes) {
 				break;
 		}
 	}
+}
+
+var STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
+var ARGUMENT_NAMES = /([^\s,]+)/g;
+
+function getParamNames(func) {
+	var fnStr = func.toString().replace(STRIP_COMMENTS, '');
+	var result = fnStr.slice(fnStr.indexOf('(')+1, fnStr.indexOf(')')).match(ARGUMENT_NAMES);
+	if (result === null) result = [];
+	return result;
 }
