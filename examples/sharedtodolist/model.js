@@ -1,4 +1,10 @@
-require("../../pushmodel.js").listen("localhost", 8080, {
+var http = require("http"),
+	server = http.createServer(),
+	pm = require("../../pushmodel.js");
+
+server.listen(8080);
+
+pm.mount(server, "/todo", {
 	items: [],
 	addItem: function(text) {
 		this.items.push({text: text});

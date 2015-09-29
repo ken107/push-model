@@ -1,29 +1,35 @@
 ## What's This?
 This Node module implements a WebSocket JSON-RPC server with object synchronization capabilities based on the JSON-Pointer and JSON-Patch standards.
 
-It is called a Push Model because it is intended to be used as part of a server-side MVC Model layer or MVVM ViewModel layer that requires the ability to push updates to clients.
+It is called a Push Model because it is intended to be used as part of a server-side MVC Model layer or MVVM ViewModel layer that requires the ability to push changes to clients.
 
-The Model/ViewModel layer can handle JSON-RPC requests and return data directly to the requester, or it may choose to place data in a _model object_, which is published to any interested clients.  `Object.observe` is used to detect subsequent changes to the data, which are published incrementally as JSON Patches.
+The Model/ViewModel layer can handle JSON-RPC requests and return data directly to the requester, or it may choose to place data in a _model object_ that is published to interested clients.  `Object.observe` is used to detect subsequent changes to the data, which are published incrementally as JSON Patches.
 
 
 ## How To Use
+```javascript
+var server = require("http").createServer(),
+	pm = require("push-model"),
+	model = {
+		//properties that client can subscribe to
+		prop1: ...,
+		prop2: ...,
+		
+		//RPC methods
+		method1: function(params) {
+			...
+			return result;
+		},
+		method2: ...
+	};
+pm.mount(server, "/path", model, acceptOrigins);
 ```
-var pm = require("push-model");
-var model = {
-	prop1: ...,
-	prop2: ...,
-	method1: function(params) {
-		...
-		return result;
-	},
-	method2: ...
-}
-pm.listen(host, port, model);
-```
-This will start listening for WebSocket connections on the specified host and port.  Clients will connect and send RPC requests which will invoke the corresponding methods on the _model_ object.  Return values are automatically sent back as JSON-RPC responses.
+This creates an HTTP server and mounts the model on the specified route.  Clients can send RPC requests to this route over either HTTP or WebSocket, which will invoke the corresponding methods on the _model_ object.  Return values are automatically sent back as JSON-RPC responses.
 
 
 ### Special Methods
+The PUB/SUB mechanism is only available to WebSocket clients.
+
 ##### SUB/UNSUB
 Clients call SUB/UNSUB to start/stop observing changes to the model object.  A _pointer_ parameter, which is a JSON Pointer, indicates which _subtree_ in the model object to observe.
 ```
@@ -48,7 +54,7 @@ return new pm.ErrorResponse(code, message, data);
 ##### AsyncResponse
 A return value of type AsyncResponse will delay the JSON-RPC response until the application calls the AsyncResponse.send function.
 ```
-var response = new require("push-model").AsyncResponse();
+var response = new pm.AsyncResponse();
 getDataFromDB(function(result) {
 	response.send(result);
 });
@@ -56,10 +62,10 @@ return response;
 ```
 
 
-### A Simple Example
-An MVC chat server that uses object synchronization.
+### A Example Model
+An MVC chat server that uses object synchronization to push chat messages to clients.
 ```javascript
-require("push-model").listen("localhost", 8080, {
+pm.mount(server, "/chat", {
 	//data
 	chatLog: [],
 	

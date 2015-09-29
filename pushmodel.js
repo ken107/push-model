@@ -21,21 +21,59 @@ exports.AsyncResponse = function() {
 	};
 };
 
-exports.listen = function(host, port, model) {
-	var wss = new WebSocketServer({host: host, port: port});
+exports.mount = function(server, path, model, acceptOrigins) {
+	server.on("request", function(req, res) {
+		if (require("url").parse(req.url).pathname == path) {
+			if (req.headers.origin) {
+				var url = require("url").parse(req.headers.origin);
+				if (acceptOrigins == null) res.setHeader("Access-Control-Allow-Origin", "*");
+				else if (acceptOrigins.indexOf(url.hostname) != -1) res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
+			}
+			if (req.method == "POST") {
+				var text = '';
+				req.setEncoding('utf8');
+				req.on('data', function(chunk) {
+					text += chunk;
+				})
+				.on('end', function() {
+					new Handler(null, model, send).handle(text);
+				});
+			}
+			else if (req.method == "OPTIONS" && req.headers["access-control-request-method"]) {
+				res.setHeader("Access-Control-Allow-Methods", "POST");
+				res.end();
+			}
+			else {
+				res.writeHead(405, "Method Not Allowed");
+				res.end();
+			}
+		}
+		function send(message) {
+			res.setHeader("Content-Type", "application/json");
+			res.end(JSON.stringify(message), "utf8");
+		}
+	});
+	var wss = new WebSocketServer({
+		server: server,
+		path: path,
+		verifyClient: function(info, callback) {
+			var url = require("url").parse(info.origin);
+			if (acceptOrigins == null || acceptOrigins.indexOf(url.hostname) != -1) {
+				if (callback) callback(true);
+				else return true;
+			}
+			else {
+				if (callback) callback(false, 403, "Forbidden");
+				else return false;
+			}
+		}
+	});
 	wss.on("connection", function(ws) {
 		var session = null;
 		var subman = new SubMan(model, send);
 		ws.on("message", function(text) {
 			model.session = session;
-			try {
-				var messages = JSON.parse(text);
-				if (!Array.isArray(messages)) messages = [messages];
-				messages.forEach(handle);
-			}
-			catch (err) {
-				sendError(null, -32700, "Parse error");
-			}
+			new Handler(subman, model, send).handle(text);
 			session = model.session;
 			model.session = null;
 		});
@@ -43,57 +81,75 @@ exports.listen = function(host, port, model) {
 			subman.unsubscribeAll();
 			if (session && session.onclose instanceof Function) session.onclose();
 		});
-		function handle(message) {
-			if (message.jsonrpc != "2.0") {
-				sendError(message.id, -32600, "Invalid request", "Not JSON-RPC version 2.0");
-				return;
-			}
-			var func;
-			switch (message.method) {
-				case "SUB": func = subman.subscribe; break;
-				case "UNSUB": func = subman.unsubscribe; break;
-				default: func = model[message.method];
-			}
-			if (!(func instanceof Function)) {
-				sendError(message.id, -32601, "Method not found");
-				return;
-			}
-			if (!message.params) message.params = [];
-			else if (!Array.isArray(message.params)) message.params = getParamNames(func).map(function(name) {return message.params[name]});
-			try {
-				var result = func.apply(model, message.params);
-				handleResult(message.id, result);
-			}
-			catch (err) {
-				console.log(err.stack);
-				sendError(message.id, -32603, "Internal error");
-			}
-		}
-		function handleResult(id, result) {
-			if (result instanceof exports.ErrorResponse) sendError(id, result.code, result.message, result.data);
-			else if (result instanceof exports.AsyncResponse) {
-				if (result.hasOwnProperty("result")) handleResult(id, result.result);
-				else result.send = handleResult.bind(null, id);
-			}
-			else sendResult(id, result);
-		}
-		function sendResult(id, result) {
-			if (id !== undefined) send({id: id, result: result});
-		}
-		function sendError(id, code, message, data) {
-			if (id !== undefined) send({id: id, error: {code: code, message: message, data: data}});
-		}
 		function send(message) {
-			try {
-				message.jsonrpc = "2.0";
-				ws.send(JSON.stringify(message));
-			}
-			catch (err) {
-				console.log(err.stack);
-			}
+			ws.send(JSON.stringify(message), function(err) {
+				if (err) console.log(err.stack || err);
+			});
 		}
 	});
 };
+
+function Handler(subman, model, send) {
+	var countResponses;
+	var responses = [];
+	this.handle = function(text) {
+		try {
+			var messages = JSON.parse(text);
+			if (!Array.isArray(messages)) messages = [messages];
+			countResponses = messages.reduce(function(sum, message) {return message.id !== undefined ? sum+1 : sum}, 0);
+			messages.forEach(handleMessage);
+		}
+		catch (err) {
+			countResponses = 1;
+			sendError(null, -32700, "Parse error");
+		}
+	};
+	function handleMessage(message) {
+		if (message.jsonrpc != "2.0") {
+			sendError(message.id, -32600, "Invalid request", "Not JSON-RPC version 2.0");
+			return;
+		}
+		var func;
+		switch (message.method) {
+			case "SUB": if (subman) func = subman.subscribe; break;
+			case "UNSUB": if (subman) func = subman.unsubscribe; break;
+			default: func = model[message.method];
+		}
+		if (!(func instanceof Function)) {
+			sendError(message.id, -32601, "Method not found");
+			return;
+		}
+		if (!message.params) message.params = [];
+		else if (!Array.isArray(message.params)) message.params = getParamNames(func).map(function(name) {return message.params[name]});
+		try {
+			var result = func.apply(model, message.params);
+			handleResult(message.id, result);
+		}
+		catch (err) {
+			console.log(err.stack);
+			sendError(message.id, -32603, "Internal error");
+		}
+	}
+	function handleResult(id, result) {
+		if (result instanceof exports.ErrorResponse) sendError(id, result.code, result.message, result.data);
+		else if (result instanceof exports.AsyncResponse) {
+			if (result.hasOwnProperty("result")) handleResult(id, result.result);
+			else result.send = handleResult.bind(null, id);
+		}
+		else sendResult(id, result);
+	}
+	function sendResult(id, result) {
+		if (id !== undefined) sendResponse({id: id, result: result});
+	}
+	function sendError(id, code, message, data) {
+		if (id !== undefined) sendResponse({id: id, error: {code: code, message: message, data: data}});
+	}
+	function sendResponse(response) {
+		response.jsonrpc = "2.0";
+		responses.push(response);
+		if (responses.length == countResponses) send(responses.length == 1 ? responses[0] : responses);
+	}
+}
 
 function SubMan(model, send) {
 	var subscriptions = {};

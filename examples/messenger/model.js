@@ -1,5 +1,9 @@
-var pm = require("../../pushmodel.js");
-pm.listen("localhost", 8080, new Model());
+var http = require("http"),
+	server = http.createServer(),
+	pm = require("../../pushmodel.js");
+
+server.listen(8080);
+pm.mount(server, "/messaging", new Model());
 
 
 function Model() {
