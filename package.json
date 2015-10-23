@@ -1,7 +1,7 @@
 {
   "name": "push-model",
-  "version": "0.0.2",
-  "description": "A JSONPatch-based object synchronization protocol and reference implementation",
+  "version": "0.0.5",
+  "description": "A JSON-RPC server with object synchronization based on JSON-Patch",
   "keywords": ["mvc", "model", "push", "synchronization", "observe", "jsonpatch", "firebase"],
   "license": "MIT",
   "author": "Hai Phan <hai.phan@gmail.com>",
@@ -12,6 +12,7 @@
   "bugs": {
     "url": "https://github.com/ken107/push-model/issues"
   },
+  "main": "pushmodel.js",
   "files": [
     "pushmodel.js",
 	"examples"
