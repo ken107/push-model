@@ -9,6 +9,10 @@ pm.mount(server, "/messaging", new Model());
 function Model() {
 	this.users = {};
 	pm.trackKeys(this.users);
+	
+	this.onConnect = function() {
+		this.session = {};
+	};
 
 	this.signIn = function(userInfo) {
 		var user = this.users[userInfo.id];
@@ -20,12 +24,13 @@ function Model() {
 		}
 		user.name = userInfo.name;
 		user.sessions++;
-		this.session = {
-			state: user.state,
-			conversations: user.conversations,
-		};
-		pm.defPrivate(this.session, "userInfo", userInfo);
-		pm.defPrivate(this.session, "onclose", function() {user.sessions--});
+		pm.defPrivate(this.session, "user", user);
+		this.session.state = user.state;
+		this.session.conversations = user.conversations;
+	};
+	
+	this.onDisconnect = function() {
+		this.session.user.sessions--;
 	};
 
 	this.showMessenger = function(show) {
@@ -33,12 +38,12 @@ function Model() {
 	};
 
 	this.openChat = function(otherUserId) {
-		if (otherUserId == this.session.userInfo.id) return;
+		if (otherUserId == this.session.user.id) return;
 		if (!this.session.conversations[otherUserId]) {
 			var log = [];
 			pm.defPrivate(log, "lastModified", Date.now());
 			this.session.conversations[otherUserId] = {log: log};
-			this.users[otherUserId].conversations[this.session.userInfo.id] = {log: log};
+			this.users[otherUserId].conversations[this.session.user.id] = {log: log};
 		}
 		this.session.conversations[otherUserId].open = true;
 	};
@@ -46,12 +51,12 @@ function Model() {
 	this.sendChat = function(otherUserId, message) {
 		var log = this.session.conversations[otherUserId].log;
 		log.push({
-			sender: {id: this.session.userInfo.id, name: this.session.userInfo.name},
+			sender: this.session.user,
 			text: message,
 			time: (log.lastModified < Date.now()-5*60*1000) ? Date.now() : undefined
 		});
 		log.lastModified = Date.now();
-		this.users[otherUserId].conversations[this.session.userInfo.id].open = true;
+		this.users[otherUserId].conversations[this.session.user.id].open = true;
 	};
 
 	this.closeChat = function(otherUserId) {

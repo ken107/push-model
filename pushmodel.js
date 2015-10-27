@@ -69,17 +69,19 @@ exports.mount = function(server, path, model, acceptOrigins) {
 		}
 	});
 	wss.on("connection", function(ws) {
-		var session = null;
+		var session = {};
 		var subman = new SubMan(model, send);
-		ws.on("message", function(text) {
+		onReceive('{"jsonrpc":"2.0","method":"onConnect"}');
+		ws.on("message", onReceive);
+		function onReceive(text) {
 			model.session = session;
 			new Handler(subman, model, send).handle(text);
 			session = model.session;
 			model.session = null;
-		});
+		}
 		ws.on("close", function() {
 			subman.unsubscribeAll();
-			if (session && session.onclose instanceof Function) session.onclose();
+			onReceive('{"jsonrpc":"2.0","method":"onDisconnect"}');
 		});
 		function send(message) {
 			ws.send(JSON.stringify(message), function(err) {
