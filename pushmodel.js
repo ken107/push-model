@@ -199,14 +199,13 @@ exports.defPrivate = function(obj, prop, val) {
 };
 
 exports.trackKeys = function(obj) {
-	if (obj.keys) return;
-	obj.keys = [];
+	if (!obj.keys) obj.keys = Object.keys(obj);
 	Object.observe(obj, updateKeys, ["add", "delete", "reconfigure"]);
-	return {
-		cancel: function() {
-			Object.unobserve(obj, updateKeys);
-		}
-	};
+	return obj;
+};
+
+exports.untrackKeys = function(obj) {
+	Object.unobserve(obj, updateKeys);
 };
 
 function updateKeys(changes) {

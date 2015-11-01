@@ -1,6 +1,6 @@
 {
   "name": "push-model",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "A JSON-RPC server with object synchronization based on JSON-Patch",
   "keywords": ["mvc", "model", "push", "synchronization", "observe", "jsonpatch", "firebase"],
   "license": "MIT",
@@ -18,7 +18,7 @@
 	"examples"
   ],
   "dependencies": {
-    "jsonpatch-observe": "^0.0.6",
+    "jsonpatch-observe": "^0.0.9",
     "jsonpointer": "^1.1.0",
     "ws": "^0.7.1"
   },
