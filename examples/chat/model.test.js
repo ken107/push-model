@@ -28,7 +28,7 @@ test("only one", async () => {
   expect(await c2.receive()).toEqual(makeReq(undefined, "PUB", [[{op:"replace", path:"/chatLog", value:["Welcome!"]}]]));
 
   c2.send(makeReq(++id, "sendChat", ["John", "Hey, what's up?"]));
-  expect(await c1.receive()).toEqual(makeRes(id));
+  expect(await c2.receive()).toEqual(makeRes(id));
   expect(await c1.receive()).toEqual(makeReq(undefined, "PUB", [[{op:"splice", path:"/chatLog/1", remove:0, add:["John: Hey, what's up?"]}]]));
   expect(await c2.receive()).toEqual(makeReq(undefined, "PUB", [[{op:"splice", path:"/chatLog/1", remove:0, add:["John: Hey, what's up?"]}]]));
 })
