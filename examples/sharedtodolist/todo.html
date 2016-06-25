@@ -38,7 +38,7 @@
 		items = [];
 
 		var idGen = 0;
-		var ws = new (WebSocket || MozWebSocket)("ws://localhost:8080/todo");
+		var ws = new (WebSocket || MozWebSocket)("ws://localhost:8085/todo");
 		ws.onopen = function() {
 			ws.send(JSON.stringify({jsonrpc: "2.0", id: ++idGen, method: "SUB", params: ["/items"]}));
 		};

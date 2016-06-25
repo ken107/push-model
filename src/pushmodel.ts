@@ -8,7 +8,7 @@
 import { Server, IncomingMessage, ServerResponse } from "http";
 import { parse as parseUrl } from "url";
 import * as WebSocket from "ws";
-import { get as getPointer } from "json-pointer";
+import { has as hasPointer, get as getPointer } from "json-pointer";
 import { observe, config as observeOpts, Patch, Subscriber } from "jsonpatch-observe";
 
 export const options = Object.assign(observeOpts, {
@@ -80,8 +80,8 @@ export function mount(server: Server, path: string, model: any, acceptOrigins: A
 		server: server,
 		path: path,
 		verifyClient: function(info, callback) {
-			const url = require("url").parse(info.origin);
-			if (acceptOrigins == null || acceptOrigins.indexOf(url.hostname) != -1) {
+			const origin = info.origin ? require("url").parse(info.origin).hostname : null;
+			if (acceptOrigins == null || acceptOrigins.indexOf(origin) != -1) {
 				if (callback) callback(true);
 				else return true;
 			}
@@ -205,8 +205,9 @@ class SubMan {
 		if (pointer == "") return new ErrorResponse(-32602, "Invalid params", "Cannot subscribe to the root model object");
 		if (this.subscriptions[pointer]) this.subscriptions[pointer].count++;
 		else {
+			if (!hasPointer(this.model, pointer)) return new ErrorResponse(0, "Application error", "Can't subscribe to '" + pointer + "', path not found");
 			const obj = getPointer(this.model, pointer);
-			if (!(obj instanceof Object)) return new ErrorResponse(0, "Application error", "Can't subscribe to '" + pointer + "', value is null or not an object");
+			if (!(obj instanceof Object)) return new ErrorResponse(0, "Application error", "Can't subscribe to '" + pointer + "', value is not an object");
 			this.onPatch(pointer, {op: "replace", path: "", value: obj});
 			this.subscriptions[pointer] = {
 				target: obj,
@@ -231,7 +232,7 @@ class SubMan {
 		for (const pointer in this.subscriptions) this.subscriptions[pointer].target.$unsubscribe(this.subscriptions[pointer].callback);
 	}
 	onPatch(pointer: string, patch: Patch) {
-		console.log(this.id, pointer, patch);
+		//console.log(this.id, pointer, patch);
 		if (!this.pendingPatches.length) setTimeout(this.sendPendingPatches.bind(this), 0);
 		this.pendingPatches.push(this.copyPatch(patch, pointer+patch.path));
 	}

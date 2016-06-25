@@ -33,7 +33,7 @@
   "dependencies": {
     "json-pointer": "^0.6.0",
     "jsonpatch-observe": "^0.1.5",
-    "ws": "^0.7.1"
+    "ws": "^5.2.1"
   },
   "engines": {
     "node": ">=6.4.0"

@@ -77,7 +77,7 @@
 			<div class="time-marker"
 				bind-statement-1="$(thisElem).toggle(#message.time != null)">{{#message.time && this.formatTime(#message.time)}}</div>
 			<div class="chat-entry"
-				bind-statement-1="$(thisElem).toggleClass('me', #message.sender.id != #otherUser.id)">{{#message.text}}</div>
+				bind-statement-1="$(thisElem).toggleClass('me', #message.sender != #otherUser.id)">{{#message.text}}</div>
 		</div>
 	</div>
 	<div class="chat-form">

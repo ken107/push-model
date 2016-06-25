@@ -2,7 +2,7 @@ var http = require("http"),
 	server = http.createServer(),
 	pm = require("../../dist/pushmodel.js");
 
-server.listen(8080);
+server.listen(8085);
 
 pm.mount(server, "/todo", {
 	items: [],
@@ -29,3 +29,5 @@ pm.mount(server, "/todo", {
 		this.items[index].text = text;
 	}
 });
+
+exports.shutdown = () => server.close();

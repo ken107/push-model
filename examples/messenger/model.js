@@ -2,7 +2,7 @@ var http = require("http"),
 	server = http.createServer(),
 	pm = require("../../dist/pushmodel.js");
 
-server.listen(8080);
+server.listen(8085);
 pm.mount(server, "/messaging", new Model());
 
 
@@ -34,7 +34,7 @@ function Model() {
 	};
 
 	this.onDisconnect = function() {
-		this.session._user.sessions--;
+		if (this.session._user) this.session._user.sessions--;
 	};
 
 	this.showMessenger = function(show) {
@@ -57,7 +57,7 @@ function Model() {
 	this.sendChat = function(otherUserId, message) {
 		var log = this.session.conversations[otherUserId].log;
 		log.push({
-			sender: this.session._user,
+			sender: this.session._user.id,
 			text: message,
 			time: (log._lastModified < Date.now()-5*60*1000) ? Date.now() : undefined
 		});
@@ -77,3 +77,5 @@ function Model() {
 		this.session.conversations[otherUserId].position = position;
 	};
 }
+
+exports.shutdown = () => server.close();

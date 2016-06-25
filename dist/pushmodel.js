@@ -57,8 +57,8 @@ function mount(server, path, model, acceptOrigins) {
         server: server,
         path: path,
         verifyClient: function (info, callback) {
-            const url = require("url").parse(info.origin);
-            if (acceptOrigins == null || acceptOrigins.indexOf(url.hostname) != -1) {
+            const origin = info.origin ? require("url").parse(info.origin).hostname : null;
+            if (acceptOrigins == null || acceptOrigins.indexOf(origin) != -1) {
                 if (callback)
                     callback(true);
                 else
@@ -197,9 +197,11 @@ class SubMan {
         if (this.subscriptions[pointer])
             this.subscriptions[pointer].count++;
         else {
+            if (!json_pointer_1.has(this.model, pointer))
+                return new ErrorResponse(0, "Application error", "Can't subscribe to '" + pointer + "', path not found");
             const obj = json_pointer_1.get(this.model, pointer);
             if (!(obj instanceof Object))
-                return new ErrorResponse(0, "Application error", "Can't subscribe to '" + pointer + "', value is null or not an object");
+                return new ErrorResponse(0, "Application error", "Can't subscribe to '" + pointer + "', value is not an object");
             this.onPatch(pointer, { op: "replace", path: "", value: obj });
             this.subscriptions[pointer] = {
                 target: obj,
@@ -228,7 +230,7 @@ class SubMan {
             this.subscriptions[pointer].target.$unsubscribe(this.subscriptions[pointer].callback);
     }
     onPatch(pointer, patch) {
-        console.log(this.id, pointer, patch);
+        //console.log(this.id, pointer, patch);
         if (!this.pendingPatches.length)
             setTimeout(this.sendPendingPatches.bind(this), 0);
         this.pendingPatches.push(this.copyPatch(patch, pointer + patch.path));
