@@ -42,6 +42,7 @@
     "@types/jest": "^23.1.1",
     "@types/json-pointer": "^1.0.30",
     "@types/ws": "^5.1.2",
-    "jest": "^23.1.0"
+    "jest": "^23.1.0",
+    "typescript": "^2.9.2"
   }
 }

@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/ken107/push-model.svg?branch=master)](https://travis-ci.org/ken107/push-model)
+
 ## What's This?
 This Node module implements a WebSocket JSON-RPC server with object synchronization capabilities based on the JSON-Pointer and JSON-Patch standards.
 
