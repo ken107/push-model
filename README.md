@@ -3,7 +3,7 @@ This Node module implements a WebSocket JSON-RPC server with object synchronizat
 
 It is called a Push Model because it is intended to be used as part of a server-side MVC Model layer or MVVM ViewModel layer that requires the ability to push changes to clients.
 
-The Model/ViewModel layer can handle JSON-RPC requests and return data directly to the requester, or it may choose to place data in a _model object_ that is published to interested clients.  `Object.observe` is used to detect subsequent changes to the data, which are published incrementally as JSON Patches.
+The Model/ViewModel layer can handle JSON-RPC requests and return data directly to the requester, or it may choose to place data in a _model object_ that is published to interested clients.  [Harmony Proxy](https://github.com/ken107/jsonpatch-observe) is used to detect subsequent changes to the data, which are published incrementally as JSON Patches.
 
 
 ## How To Use
@@ -14,7 +14,7 @@ var server = require("http").createServer(),
 		//properties that client can subscribe to
 		prop1: ...,
 		prop2: ...,
-		
+
 		//RPC methods
 		method1: function(params) {
 			...
@@ -68,7 +68,7 @@ An MVC chat server that uses object synchronization to push chat messages to cli
 pm.mount(server, "/chat", {
 	//data
 	chatLog: [],
-	
+
 	//actions
 	sendChat: function(name, message) {
 		this.chatLog.push(name + ": " + message);

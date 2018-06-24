@@ -1,8 +1,16 @@
 {
   "name": "push-model",
-  "version": "0.0.7",
+  "version": "0.1.0",
   "description": "A JSON-RPC server with object synchronization based on JSON-Patch",
-  "keywords": ["mvc", "model", "push", "synchronization", "observe", "jsonpatch", "firebase"],
+  "keywords": [
+    "mvc",
+    "model",
+    "push",
+    "synchronization",
+    "observe",
+    "jsonpatch",
+    "firebase"
+  ],
   "license": "MIT",
   "author": "Hai Phan <hai.phan@gmail.com>",
   "repository": {
@@ -12,17 +20,28 @@
   "bugs": {
     "url": "https://github.com/ken107/push-model/issues"
   },
-  "main": "pushmodel.js",
+  "main": "dist/pushmodel.js",
+  "types": "dist/pushmodel.d.ts",
   "files": [
-    "pushmodel.js",
-	"examples"
+    "dist/pushmodel.js",
+    "dist/pushmodel.d.ts"
   ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
   "dependencies": {
-    "jsonpatch-observe": "^0.0.9",
-    "jsonpointer": "^1.1.0",
+    "json-pointer": "^0.6.0",
+    "jsonpatch-observe": "^0.1.4",
     "ws": "^0.7.1"
   },
   "engines": {
-    "node": ">=0.11.13"
+    "node": ">=6.4.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^23.1.1",
+    "@types/json-pointer": "^1.0.30",
+    "@types/ws": "^5.1.2",
+    "jest": "^23.1.0"
   }
 }

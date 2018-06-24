@@ -1,36 +1,40 @@
 var http = require("http"),
 	server = http.createServer(),
-	pm = require("../../pushmodel.js");
+	pm = require("../../dist/pushmodel.js");
 
 server.listen(8080);
 pm.mount(server, "/messaging", new Model());
 
 
 function Model() {
-	this.users = {};
-	pm.trackKeys(this.users);
-	
+	this.users = pm.trackKeys({});
+
 	this.onConnect = function() {
 		this.session = {};
 	};
 
 	this.signIn = function(userInfo) {
 		var user = this.users[userInfo.id];
-		if (!user) {
-			user = this.users[userInfo.id] = {id: userInfo.id, sessions: 0};
-			pm.defPrivate(user, "state", {showMessenger: false});
-			pm.defPrivate(user, "conversations", {});
-			pm.trackKeys(user.conversations);
+		if (user) {
+			user.name = userInfo.name;
+			user.sessions++;
 		}
-		user.name = userInfo.name;
-		user.sessions++;
-		pm.defPrivate(this.session, "user", user);
-		this.session.state = user.state;
-		this.session.conversations = user.conversations;
+		else {
+			user = this.users[userInfo.id] = {
+				id: userInfo.id,
+				name: userInfo.name,
+				sessions: 1,
+				_state: {showMessenger: false},
+				_conversations: pm.trackKeys({})
+			};
+		}
+		this.session._user = user;
+		this.session.state = user._state;
+		this.session.conversations = user._conversations;
 	};
-	
+
 	this.onDisconnect = function() {
-		this.session.user.sessions--;
+		this.session._user.sessions--;
 	};
 
 	this.showMessenger = function(show) {
@@ -38,25 +42,27 @@ function Model() {
 	};
 
 	this.openChat = function(otherUserId) {
-		if (otherUserId == this.session.user.id) return;
-		if (!this.session.conversations[otherUserId]) {
-			var log = [];
-			pm.defPrivate(log, "lastModified", Date.now());
-			this.session.conversations[otherUserId] = {log: log};
-			this.users[otherUserId].conversations[this.session.user.id] = {log: log};
+		if (otherUserId == this.session._user.id) return;
+		if (this.session.conversations[otherUserId]) {
+			this.session.conversations[otherUserId].open = true;
 		}
-		this.session.conversations[otherUserId].open = true;
+		else {
+			var log = [];
+			log._lastModified = Date.now();
+			this.session.conversations[otherUserId] = {log: log, open: true};
+			this.users[otherUserId]._conversations[this.session._user.id] = {log: log};
+		}
 	};
 
 	this.sendChat = function(otherUserId, message) {
 		var log = this.session.conversations[otherUserId].log;
 		log.push({
-			sender: this.session.user,
+			sender: this.session._user,
 			text: message,
-			time: (log.lastModified < Date.now()-5*60*1000) ? Date.now() : undefined
+			time: (log._lastModified < Date.now()-5*60*1000) ? Date.now() : undefined
 		});
-		log.lastModified = Date.now();
-		this.users[otherUserId].conversations[this.session.user.id].open = true;
+		log._lastModified = Date.now();
+		this.users[otherUserId]._conversations[this.session._user.id].open = true;
 	};
 
 	this.closeChat = function(otherUserId) {

@@ -2,10 +2,12 @@
 <html>
 <head>
 	<link href="components.css" rel="stylesheet" type="text/css" />
-	
+
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 	<script src="//rawgit.com/ken107/databind-js/master/databind.js"></script>
-	<script src="//rawgit.com/Starcounter-Jack/JSON-Patch/master/src/json-patch.js"></script>
+	<!-- here we use a fork of Starcounter-Jack's JSONPatch library that supports the non-standard "splice" op
+		use this if you expect to insert/remove large number of array elements and are concerned about performance -->
+	<script src="//rawgit.com/ken107/JSON-Patch/master/dist/fast-json-patch.js"></script>
 	<script src="components.js"></script>
 	<script>
 		$("<div/>").load("components.html", function() {

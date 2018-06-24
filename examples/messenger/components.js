@@ -8,19 +8,22 @@ function Messenger(elem) {
 		if (ws) ws.close();
 		ws = new (WebSocket || MozWebSocket)(this.connectUrl);
 		ws.onopen = (function() {
-			this.action("signIn", [this.myUserInfo]);
 			ws.send(JSON.stringify([
+				{jsonrpc: "2.0", id: ++idGen, method: "signIn", params: [this.myUserInfo]},
 				{jsonrpc: "2.0", id: ++idGen, method: "SUB", params: ["/users"]},
 				{jsonrpc: "2.0", id: ++idGen, method: "SUB", params: ["/session"]}
 			]));
 		}).bind(this);
 		ws.onmessage = (function(e) {
+			console.log('<', e.data);
 			var m = JSON.parse(e.data);
-			if (m.method == "PUB") jsonpatch.apply(this, m.params[0]);
+			if (m.method == "PUB") jsonpatch.applyPatch(this, m.params[0]);
 		}).bind(this);
 	};
 	this.action = function(method, args) {
-		ws.send(JSON.stringify({jsonrpc: "2.0", id: ++idGen, method: method, params: args}));
+		var text = JSON.stringify({jsonrpc: "2.0", id: ++idGen, method: method, params: args});
+		console.log('>', text);
+		ws.send(text);
 	};
 }
 

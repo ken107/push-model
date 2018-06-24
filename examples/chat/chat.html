@@ -2,7 +2,9 @@
 <html>
 <head>
 	<script src="https://rawgit.com/ken107/databind-js/master/databind.js"></script>
-	<script src="https://rawgit.com/Starcounter-Jack/JSON-Patch/master/src/json-patch.js"></script>
+	<!-- here we use a fork of Starcounter-Jack's JSONPatch library that supports the non-standard "splice" op
+		use this if you expect to insert/remove large number of array elements and are concerned about performance -->
+	<script src="https://rawgit.com/ken107/JSON-Patch/master/dist/fast-json-patch.js"></script>
 	<script>
 		var idGen = 0;
 		var model = {
@@ -13,11 +15,14 @@
 			ws.send(JSON.stringify({jsonrpc: "2.0", id: ++idGen, method: "SUB", params: ["/chatLog"]}));
 		};
 		ws.onmessage = function(e) {
+			console.log('<', e.data);
 			var m = eval('(' + e.data + ')');
-			if (m.method == "PUB") jsonpatch.apply(model, m.params[0]);
+			if (m.method == "PUB") jsonpatch.applyPatch(model, m.params[0]);
 		};
 		function send(name, message) {
-			ws.send(JSON.stringify({jsonrpc: "2.0", id: ++idGen, method: "sendChat", params: [name, message]}));
+			var text = JSON.stringify({jsonrpc: "2.0", id: ++idGen, method: "sendChat", params: [name, message]});
+			console.log('>', text);
+			ws.send(text);
 		}
 	</script>
 </head>

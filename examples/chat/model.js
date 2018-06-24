@@ -1,6 +1,6 @@
 var http = require("http"),
 	server = http.createServer(),
-	pm = require("../../pushmodel.js");
+	pm = require("../../dist/pushmodel.js");
 
 server.listen(8080);
 
