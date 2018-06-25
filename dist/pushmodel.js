@@ -1,4 +1,12 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const url_1 = require("url");
 const WebSocket = require("ws");
@@ -16,12 +24,6 @@ class ErrorResponse {
     }
 }
 exports.ErrorResponse = ErrorResponse;
-class AsyncResponse {
-    send(result) {
-        this.result = result;
-    }
-}
-exports.AsyncResponse = AsyncResponse;
 function mount(server, path, model, acceptOrigins) {
     model = jsonpatch_observe_1.observe(model);
     server.on("request", function (req, res) {
@@ -37,7 +39,7 @@ function mount(server, path, model, acceptOrigins) {
                 let text = '';
                 req.setEncoding('utf8');
                 req.on('data', chunk => text += chunk);
-                req.on('end', () => new Handler(null, model, send).handle(text));
+                req.on('end', () => new RequestHandler(null, model, send).handle(text));
             }
             else if (req.method == "OPTIONS" && req.headers["access-control-request-method"]) {
                 res.setHeader("Access-Control-Allow-Methods", "POST");
@@ -79,10 +81,12 @@ function mount(server, path, model, acceptOrigins) {
         ws.on("message", onReceive);
         ws.on("close", onClose);
         function onReceive(text) {
-            model.session = session;
-            new Handler(subman, model, send).handle(text);
-            session = model.session;
-            model.session = null;
+            return __awaiter(this, void 0, void 0, function* () {
+                model.session = session;
+                yield new RequestHandler(subman, model, send).handle(text);
+                session = model.session;
+                model.session = null;
+            });
         }
         function onClose() {
             subman.unsubscribeAll();
@@ -102,7 +106,7 @@ function mount(server, path, model, acceptOrigins) {
     }
 }
 exports.mount = mount;
-class Handler {
+class RequestHandler {
     constructor(subman, model, send) {
         this.subman = subman;
         this.model = model;
@@ -110,59 +114,55 @@ class Handler {
         this.responses = [];
     }
     handle(text) {
-        try {
-            const data = JSON.parse(text);
-            const requests = Array.isArray(data) ? data : [data];
-            this.countResponses = requests.reduce(function (sum, request) { return request.id !== undefined ? sum + 1 : sum; }, 0);
-            requests.forEach(request => this.handleRequest(request));
-        }
-        catch (err) {
-            console.error(err);
-            this.countResponses = 1;
-            this.sendError(null, -32700, "Parse error");
-        }
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = JSON.parse(text);
+                const requests = Array.isArray(data) ? data : [data];
+                this.countResponses = requests.reduce(function (sum, request) { return request.id !== undefined ? sum + 1 : sum; }, 0);
+                for (const request of requests)
+                    yield this.handleRequest(request);
+            }
+            catch (err) {
+                console.error(err);
+                this.countResponses = 1;
+                this.sendError(null, -32700, "Parse error");
+            }
+        });
     }
     handleRequest(request) {
-        if (request.jsonrpc != "2.0") {
-            this.sendError(request.id, -32600, "Invalid request", "Not JSON-RPC version 2.0");
-            return;
-        }
-        let func;
-        switch (request.method) {
-            case "SUB":
-                if (this.subman)
-                    func = this.subman.subscribe.bind(this.subman);
-                break;
-            case "UNSUB":
-                if (this.subman)
-                    func = this.subman.unsubscribe.bind(this.subman);
-                break;
-            default: func = this.model[request.method];
-        }
-        if (!(func instanceof Function)) {
-            this.sendError(request.id, -32601, "Method not found");
-            return;
-        }
-        try {
-            const result = func.apply(this.model, request.params || []);
-            this.handleResult(request.id, result);
-        }
-        catch (err) {
-            console.log(err.stack);
-            this.sendError(request.id, -32603, "Internal error");
-        }
-    }
-    handleResult(id, result) {
-        if (result instanceof ErrorResponse)
-            this.sendError(id, result.code, result.message, result.data);
-        else if (result instanceof AsyncResponse) {
-            if (result.hasOwnProperty("result"))
-                this.handleResult(id, result.result);
-            else
-                result.send = this.handleResult.bind(null, id);
-        }
-        else
-            this.sendResult(id, result);
+        return __awaiter(this, void 0, void 0, function* () {
+            if (request.jsonrpc != "2.0") {
+                this.sendError(request.id, -32600, "Invalid request", "Not JSON-RPC version 2.0");
+                return;
+            }
+            let func;
+            switch (request.method) {
+                case "SUB":
+                    if (this.subman)
+                        func = this.subman.subscribe.bind(this.subman);
+                    break;
+                case "UNSUB":
+                    if (this.subman)
+                        func = this.subman.unsubscribe.bind(this.subman);
+                    break;
+                default: func = this.model[request.method];
+            }
+            if (!(func instanceof Function)) {
+                this.sendError(request.id, -32601, "Method not found");
+                return;
+            }
+            try {
+                const result = yield func.apply(this.model, request.params || []);
+                if (result instanceof ErrorResponse)
+                    this.sendError(request.id, result.code, result.message, result.data);
+                else
+                    this.sendResult(request.id, result);
+            }
+            catch (err) {
+                console.log(err.stack);
+                this.sendError(request.id, -32603, "Internal error");
+            }
+        });
     }
     sendResult(id, result) {
         if (id !== undefined)

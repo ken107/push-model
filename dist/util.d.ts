@@ -1,3 +1,4 @@
+/// <reference types="ws" />
 import * as WebSocket from "ws";
 export declare class TestClient {
     waiting: Array<(result: any) => void>;

@@ -10,57 +10,48 @@ The Model/ViewModel layer can handle JSON-RPC requests and return data directly 
 
 ## How To Use
 ```javascript
-var server = require("http").createServer(),
-	pm = require("push-model"),
-	model = {
+var server = require("http").createServer();
+var model = {
 		//properties that client can subscribe to
 		prop1: ...,
 		prop2: ...,
 
 		//RPC methods
-		method1: function(params) {
+		method1: function(...args) {
 			...
-			return result;
+			return result;	//or promise
 		},
 		method2: ...
 	};
-pm.mount(server, "/path", model, acceptOrigins);
+
+require("push-model").mount(server, "/path", model, acceptOrigins);
 ```
-This creates an HTTP server and mounts the model on the specified route.  Clients can send RPC requests to this route over either HTTP or WebSocket, which will invoke the corresponding methods on the _model_ object.  Return values are automatically sent back as JSON-RPC responses.
+This creates an HTTP server and mounts `model` on the specified route.  Clients can send RPC requests to this route over either HTTP or WebSocket, which invoke the corresponding methods on the model.  Return values are automatically sent back as JSON-RPC responses.
 
 
 ### Special Methods
 The PUB/SUB mechanism is only available to WebSocket clients.
 
 ##### SUB/UNSUB
-Clients call SUB/UNSUB to start/stop observing changes to the model object.  A _pointer_ parameter, which is a JSON Pointer, indicates which _subtree_ in the model object to observe.
+Clients call SUB/UNSUB to start/stop observing changes to the model object.  The `pointer` parameter, a JSON Pointer, indicates which part of the model to observe.
 ```
 SUB(pointer)
 UNSUB(pointer)
 ```
 
 ##### PUB
-Server calls PUB to notify clients of changes to the model.  The _patches_ parameter holds an array of JSON Patches describing a series of changes that were made to the model object.
+Server calls PUB to notify clients of changes to the model.  The `patches` parameter holds an array of JSON Patches describing a series of changes that were made to the model.
 ```
 SUB(patches)
 ```
 
 
 ### Special Return Values
+
 ##### ErrorResponse
 A return value of type ErrorResponse will be translated into a JSON-RPC error message.
 ```
 return new pm.ErrorResponse(code, message, data);
-```
-
-##### AsyncResponse
-A return value of type AsyncResponse will delay the JSON-RPC response until the application calls the AsyncResponse.send function.
-```
-var response = new pm.AsyncResponse();
-getDataFromDB(function(result) {
-	response.send(result);
-});
-return response;
 ```
 
 

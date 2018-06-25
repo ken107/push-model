@@ -29,7 +29,8 @@ class TestClient {
         });
     }
     close() {
-        this.ws.close();
+        if (this.ws)
+            this.ws.close();
     }
 }
 exports.TestClient = TestClient;

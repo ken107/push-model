@@ -20,10 +20,6 @@ export declare class ErrorResponse {
     data: string;
     constructor(code: number, message: string, data: string);
 }
-export declare class AsyncResponse {
-    result: any;
-    send(result: any): void;
-}
 export declare function mount(server: Server, path: string, model: any, acceptOrigins: Array<string>): void;
 export declare function trackKeys(obj: any): any;
 export declare function untrackKeys(obj: any): void;
