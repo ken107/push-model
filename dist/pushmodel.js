@@ -4,7 +4,7 @@ const url_1 = require("url");
 const WebSocket = require("ws");
 const json_pointer_1 = require("json-pointer");
 const jsonpatch_observe_1 = require("jsonpatch-observe");
-exports.options = Object.assign(jsonpatch_observe_1.options, {
+exports.options = Object.assign(jsonpatch_observe_1.config, {
     enableSplice: true,
     excludeProperty: (target, prop) => typeof prop == "string" && prop.startsWith('_')
 });
@@ -97,7 +97,7 @@ function mount(server, path, model, acceptOrigins) {
     });
     function serialize(message) {
         return JSON.stringify(message, function (key, value) {
-            return key != '' && jsonpatch_observe_1.options.excludeProperty(this, key) ? undefined : value;
+            return key != '' && jsonpatch_observe_1.config.excludeProperty(this, key) ? undefined : value;
         });
     }
 }
@@ -249,7 +249,7 @@ function trackKeys(obj) {
     if (!obj.$handler)
         obj = jsonpatch_observe_1.observe(obj);
     if (!obj.keys)
-        obj.keys = Object.keys(obj).filter(prop => !jsonpatch_observe_1.options.excludeProperty(obj, prop));
+        obj.keys = Object.keys(obj).filter(prop => !jsonpatch_observe_1.config.excludeProperty(obj, prop));
     if (!obj._keysUpdater)
         obj.$subscribe(obj._keysUpdater = updateKeys.bind(null, obj));
     return obj;
@@ -266,7 +266,7 @@ function updateKeys(obj, patch) {
     const tokens = patch.path.split("/");
     if (tokens.length == 2) {
         const prop = tokens[1];
-        if (!jsonpatch_observe_1.options.excludeProperty(obj, prop)) {
+        if (!jsonpatch_observe_1.config.excludeProperty(obj, prop)) {
             if (patch.op == "add") {
                 const index = obj.keys.indexOf(prop);
                 if (index == -1)

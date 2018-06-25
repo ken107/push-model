@@ -1,6 +1,6 @@
 {
   "name": "push-model",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A JSON-RPC server with object synchronization based on JSON-Patch",
   "keywords": [
     "mvc",
@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "json-pointer": "^0.6.0",
-    "jsonpatch-observe": "^0.1.4",
+    "jsonpatch-observe": "^0.1.5",
     "ws": "^0.7.1"
   },
   "engines": {
