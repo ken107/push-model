@@ -10,8 +10,9 @@ The Model/ViewModel layer can handle JSON-RPC requests and return data directly 
 
 ## How To Use
 ```javascript
-var server = require("http").createServer();
-var model = {
+const pm = require("push-model");
+const server = require("http").createServer();
+const model = {
 		//properties that client can subscribe to
 		prop1: ...,
 		prop2: ...,
@@ -24,7 +25,7 @@ var model = {
 		method2: ...
 	};
 
-require("push-model").mount(server, "/path", model, acceptOrigins);
+pm.mount(server, "/path", model, acceptOrigins);
 ```
 This creates an HTTP server and mounts `model` on the specified route.  Clients can send RPC requests to this route over either HTTP or WebSocket, which invoke the corresponding methods on the model.  Return values are automatically sent back as JSON-RPC responses.
 
