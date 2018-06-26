@@ -1,6 +1,6 @@
 {
   "name": "push-model",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "A JSON-RPC server with object synchronization based on JSON-Patch",
   "keywords": [
     "mvc",
@@ -27,12 +27,12 @@
     "dist/pushmodel.d.ts"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --newLine lf",
     "test": "jest --runInBand"
   },
   "dependencies": {
     "json-pointer": "^0.6.0",
-    "jsonpatch-observe": "^0.1.5",
+    "jsonpatch-observe": "^0.1.6",
     "ws": "^5.2.1"
   },
   "engines": {
