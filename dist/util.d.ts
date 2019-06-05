@@ -4,9 +4,9 @@ export declare class TestClient {
     incoming: Array<any>;
     ws: WebSocket;
     constructor();
-    connect(url: string): Promise<{}>;
+    connect(url: string): Promise<unknown>;
     send(req: any): void;
-    receive(): Promise<{}>;
+    receive(): Promise<unknown>;
     close(): void;
 }
 export declare function makeReq(id: number, method: string, params: Array<any>): {

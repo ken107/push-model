@@ -38,11 +38,14 @@
   "engines": {
     "node": ">=6.4.0"
   },
+  "jest": {
+    "testRegex": "(\\.|/)test\\.js$"
+  },
   "devDependencies": {
-    "@types/jest": "^23.1.1",
+    "@types/jest": "^24.0.13",
     "@types/json-pointer": "^1.0.30",
     "@types/ws": "^5.1.2",
     "jest": "^24.8.0",
-    "typescript": "^2.9.2"
+    "typescript": "^3.5.1"
   }
 }
