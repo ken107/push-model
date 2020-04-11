@@ -33,7 +33,7 @@
   "dependencies": {
     "json-pointer": "^0.6.0",
     "jsonpatch-observe": "^0.1.6",
-    "ws": "^5.2.1"
+    "ws": "^7.2.3"
   },
   "engines": {
     "node": ">=6.4.0"
@@ -42,10 +42,10 @@
     "testRegex": "(\\.|/)test\\.js$"
   },
   "devDependencies": {
-    "@types/jest": "^24.0.13",
+    "@types/jest": "^25.2.1",
     "@types/json-pointer": "^1.0.30",
-    "@types/ws": "^5.1.2",
-    "jest": "^24.9.0",
-    "typescript": "^3.5.1"
+    "@types/ws": "^7.2.3",
+    "jest": "^25.3.0",
+    "typescript": "^3.8.3"
   }
 }
