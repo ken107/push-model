@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.makeRes = exports.makeReq = exports.TestClient = void 0;
 const WebSocket = require("ws");
 class TestClient {
     constructor() {
