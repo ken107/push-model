@@ -8,16 +8,15 @@ class TestClient {
         this.incoming = [];
     }
     connect(url) {
-        let fulfill;
-        const promise = new Promise(x => fulfill = x);
-        this.ws = new WebSocket(url);
-        this.ws.on("open", fulfill);
-        this.ws.on("message", (text) => {
-            this.incoming.push(JSON.parse(text));
-            while (this.incoming.length && this.waiting.length)
-                this.waiting.shift()(this.incoming.shift());
+        return new Promise(fulfill => {
+            this.ws = new WebSocket(url);
+            this.ws.on("open", fulfill);
+            this.ws.on("message", (text) => {
+                this.incoming.push(JSON.parse(text));
+                while (this.incoming.length && this.waiting.length)
+                    this.waiting.shift()(this.incoming.shift());
+            });
         });
-        return promise;
     }
     send(req) {
         this.ws.send(JSON.stringify(req));

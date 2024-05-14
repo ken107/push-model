@@ -2,7 +2,7 @@ import * as WebSocket from "ws";
 export declare class TestClient {
     waiting: Array<(result: any) => void>;
     incoming: Array<any>;
-    ws: WebSocket;
+    ws?: WebSocket;
     constructor();
     connect(url: string): Promise<unknown>;
     send(req: any): void;

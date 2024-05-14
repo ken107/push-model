@@ -27,9 +27,9 @@ class ErrorResponse {
 }
 exports.ErrorResponse = ErrorResponse;
 function mount(server, path, model, acceptOrigins) {
-    model = jsonpatch_observe_1.observe(model);
+    model = (0, jsonpatch_observe_1.observe)(model);
     server.on("request", function (req, res) {
-        if (url_1.parse(req.url).pathname == path) {
+        if ((0, url_1.parse)(req.url).pathname == path) {
             if (req.headers.origin) {
                 const url = require("url").parse(req.headers.origin);
                 if (acceptOrigins == null)
@@ -113,6 +113,7 @@ class RequestHandler {
         this.subman = subman;
         this.model = model;
         this.send = send;
+        this.countResponses = 0;
         this.responses = [];
     }
     handle(text) {
@@ -161,7 +162,7 @@ class RequestHandler {
                     this.sendResult(request.id, result);
             }
             catch (err) {
-                console.log(err.stack);
+                console.log(err);
                 this.sendError(request.id, -32603, "Internal error");
             }
         });
@@ -199,9 +200,9 @@ class SubMan {
         if (this.subscriptions[pointer])
             this.subscriptions[pointer].count++;
         else {
-            if (!json_pointer_1.has(this.model, pointer))
+            if (!(0, json_pointer_1.has)(this.model, pointer))
                 return new ErrorResponse(0, "Application error", "Can't subscribe to '" + pointer + "', path not found");
-            const obj = json_pointer_1.get(this.model, pointer);
+            const obj = (0, json_pointer_1.get)(this.model, pointer);
             if (!(obj instanceof Object))
                 return new ErrorResponse(0, "Application error", "Can't subscribe to '" + pointer + "', value is not an object");
             this.onPatch(pointer, { op: "replace", path: "", value: obj });
@@ -251,7 +252,7 @@ class SubMan {
 }
 function trackKeys(obj) {
     if (!obj.$handler)
-        obj = jsonpatch_observe_1.observe(obj);
+        obj = (0, jsonpatch_observe_1.observe)(obj);
     if (!obj.keys)
         obj.keys = Object.keys(obj).filter(prop => !jsonpatch_observe_1.config.excludeProperty(obj, prop));
     if (!obj._keysUpdater)

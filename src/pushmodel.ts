@@ -31,7 +31,7 @@ type RpcRequest = {
 
 type RpcResponse = {
 	jsonrpc: string,
-	id: RpcRequestId,
+	id: RpcRequestId|null,
 	result?: any,
 	error?: any
 }
@@ -42,7 +42,7 @@ export function mount(server: Server, path: string, model: any, acceptOrigins: A
 	model = observe(model);
 
 	server.on("request", function(req: IncomingMessage, res: ServerResponse) {
-		if (parseUrl(req.url).pathname == path) {
+		if (parseUrl(req.url!).pathname == path) {
 			if (req.headers.origin) {
 				const url = require("url").parse(req.headers.origin);
 				if (acceptOrigins == null) res.setHeader("Access-Control-Allow-Origin", "*");
@@ -103,7 +103,7 @@ export function mount(server: Server, path: string, model: any, acceptOrigins: A
 			onReceive('{"jsonrpc":"2.0","method":"onDisconnect"}');
 		}
 		function send(message: RpcMessage) {
-			ws.send(serialize(message), function(err: Error) {
+			ws.send(serialize(message), function(err?: Error) {
 				if (err) console.log(err.stack || err);
 			});
 		}
@@ -120,7 +120,8 @@ export function mount(server: Server, path: string, model: any, acceptOrigins: A
 class RequestHandler {
 	countResponses: number;
 	responses: Array<RpcResponse>;
-	constructor(private subman: SubMan, private model: any, private send: (message: any) => void) {
+	constructor(private subman: SubMan|null, private model: any, private send: (message: any) => void) {
+		this.countResponses = 0;
 		this.responses = [];
 	}
 	async handle(text: string) {
@@ -157,14 +158,14 @@ class RequestHandler {
 			else this.sendResult(request.id, result);
 		}
 		catch (err) {
-			console.log(err.stack);
+			console.log(err);
 			this.sendError(request.id, -32603, "Internal error");
 		}
 	}
-	sendResult(id: RpcRequestId, result: any) {
+	sendResult(id: RpcRequestId|undefined, result: any) {
 		if (id !== undefined) this.sendResponse({jsonrpc: "2.0", id: id, result: result});
 	}
-	sendError(id: RpcRequestId, code: number, message: string, data?: string) {
+	sendError(id: RpcRequestId|null|undefined, code: number, message: string, data?: string) {
 		if (id !== undefined) this.sendResponse({jsonrpc: "2.0", id: id, error: {code: code, message: message, data: data}});
 	}
 	sendResponse(response: RpcResponse) {
