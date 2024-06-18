@@ -7,7 +7,7 @@
  */
 import { Server, IncomingMessage, ServerResponse } from "http";
 import { parse as parseUrl } from "url";
-import * as WebSocket from "ws";
+import WebSocket from "ws";
 import { has as hasPointer, get as getPointer } from "json-pointer";
 import { observe, config as observeOpts, Patch, Subscriber } from "jsonpatch-observe";
 

@@ -28,25 +28,20 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "jest --runInBand"
+    "test": "node ./examples/chat/model.test.js && node ./examples/messenger/model.test.js && node ./examples/sharedtodolist/model.test.js"
   },
   "dependencies": {
-    "@types/node": "^20.12.11",
+    "@types/node": "^20.14.4",
     "json-pointer": "^0.6.2",
     "jsonpatch-observe": "^1.0.0",
-    "ws": "^8.17.0"
+    "ws": "^8.17.1"
   },
   "engines": {
     "node": ">=6.4.0"
   },
-  "jest": {
-    "testRegex": "(\\.|/)test\\.js$"
-  },
   "devDependencies": {
-    "@types/jest": "^29.5.12",
     "@types/json-pointer": "^1.0.34",
     "@types/ws": "^8.5.10",
-    "jest": "^29.7.0",
     "typescript": "^5.4.5"
   }
 }

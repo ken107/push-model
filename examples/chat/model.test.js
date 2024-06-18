@@ -1,5 +1,5 @@
 const { shutdown } = require("./model.js");
-const { TestClient, makeReq, makeRes } = require("../../dist/util.js");
+const { TestClient, makeReq, makeRes, beforeAll, afterAll, test, expect } = require("../../dist/util.js");
 
 const c1 = new TestClient();
 const c2 = new TestClient();
